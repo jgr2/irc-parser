@@ -73,11 +73,17 @@ int stream_eof (Stream *sp) {
 /*-\-\-----------------------------------------------------------------/-/-*/
 /*-/-/-----------------------------------------------------------------\-\-*/
 
+#define T_MAX 32
+
 typedef struct message Message;
 struct message {
 	Buffer *b;
 	size_t n;
-	char *t[32];
+	char *t[T_MAX];
+};
+
+enum ParserError {
+	PARSER_MAX_T
 };
 
 enum BufferError {
@@ -88,7 +94,8 @@ enum BufferError {
 enum MessageErrorType {
 	MESSAGE_ERROR_NONE_T,
 	MESSAGE_ERROR_BUFFER_T,
-	MESSAGE_ERROR_STREAM_T
+	MESSAGE_ERROR_STREAM_T,
+	MESSAGE_ERROR_PARSER_T
 };
 
 typedef struct message_error MessageError;
@@ -105,6 +112,12 @@ struct message_error {
 #define COLON       ':'
 
 MessageError get_message (Stream *sp, Message *mp) {
+
+#define PARSER_ERROR(e) \
+	(MessageError) {\
+		(e), \
+		MESSAGE_ERROR_PARSER_T \
+	}
 
 #define BUFFER_ERROR(e) \
 	(MessageError) {\
@@ -143,6 +156,9 @@ MessageError get_message (Stream *sp, Message *mp) {
 			goto RETURN;
 		} else if (c == SPACE) {
 			PUSHC(mp->b, '\0');
+			if (mp->n >= T_MAX) {
+				return PARSER_ERROR(PARSER_MAX_T);
+			}
 			mp->n++;
 			mp->t[mp->n] = buffer_head(mp->b) + 1;
 			continue;
