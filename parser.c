@@ -1,8 +1,9 @@
 /* TODO:
 	* error reporting and code to string conversion - half done: code-pair emission,
-		see struct message
+		see struct message_error
 	* better detection of blank lines, see test 2
-	* organisation of token array to struct layout for assicative win
+	* organisation of token array to struct layout for associative win
+	* make inline message struct comparison
  */
 
 #include <stdlib.h>
@@ -140,7 +141,7 @@ MessageError get_message (Stream *sp, Message *mp) {
 		GETC(c,sp);
 
 		if (c == NEWLINE && l == RETURN_FEED) {
-			*buffer_head(mp->b) = '\0';
+			buffer_set_head(mp->b, '\0');
 			goto RETURN;
 		} else if (c == SPACE) {
 			PUSHC(mp->b, '\0');
@@ -160,7 +161,7 @@ MessageError get_message (Stream *sp, Message *mp) {
 		GETC(c, sp);
 
 		if (c == NEWLINE && l == RETURN_FEED) {
-			*buffer_head(mp->b) = '\0';
+			buffer_set_head(mp->b, '\0');
 			break;
 		}
 		PUSHC(mp->b, c);
@@ -276,6 +277,7 @@ int main () {
 
 	if (nerrors > 0) {
 		fprintf(stderr, "%lu errors total\n");
+		exit(EXIT_FAILURE);
 	}
 
 	exit(EXIT_SUCCESS);
