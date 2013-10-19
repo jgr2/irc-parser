@@ -73,8 +73,6 @@ int stream_eof (Stream *sp) {
 /*-\-\-----------------------------------------------------------------/-/-*/
 /*-/-/-----------------------------------------------------------------\-\-*/
 
-#define ARGS_MAX 16
-
 typedef struct message Message;
 struct message {
 	Buffer *b;
