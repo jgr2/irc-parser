@@ -45,18 +45,21 @@ void buffer_reset (Buffer *b) {
 	b->len = 0;
 }
 
-typedef struct stream Stream;
-typedef int (*stream_get_fn)(void *);
+/*-\-\-----------------------------------------------------------------/-/-*/
+/*-/-/-----------------------------------------------------------------\-\-*/
 
-typedef int (*stream_error_fn)(void *);
+typedef struct stream Stream;
+
+typedef int (*stream_get_fn)(void *);
 typedef int (*stream_eof_fn)(void *);
+typedef int (*stream_error_fn)(void *);
 
 struct stream {
 	void *handle;
 	stream_get_fn get;
 
-	stream_error_fn error;
 	stream_eof_fn eof;
+	stream_error_fn error;
 };
 
 int stream_get (Stream *sp) {
@@ -74,23 +77,7 @@ int stream_eof (Stream *sp) {
 /*-\-\-----------------------------------------------------------------/-/-*/
 /*-/-/-----------------------------------------------------------------\-\-*/
 
-#define T_MAX 32
-
-typedef struct message Message;
-struct message {
-	Buffer *b;
-	size_t n;
-	char *t[T_MAX];
-};
-
-enum ParserError {
-	PARSER_MAX_T
-};
-
-enum BufferError {
-	BUFFER_EOF,
-	BUFFER_EMPTY
-};
+typedef struct message_error MessageError;
 
 enum MessageErrorType {
 	MESSAGE_ERROR_NONE_T,
@@ -99,13 +86,49 @@ enum MessageErrorType {
 	MESSAGE_ERROR_PARSER_T
 };
 
-typedef struct message_error MessageError;
 struct message_error {
-	int code;
 	enum MessageErrorType type;
+	int code;
 };
 
-#define NO_ERROR (MessageError){0, MESSAGE_ERROR_NONE_T}
+enum ParserError {
+	PARSER_NO_ERROR,
+	PARSER_T_MAX
+};
+
+enum BufferError {
+	BUFFER_NO_ERROR,
+	BUFFER_EOF,
+	BUFFER_EMPTY
+};
+
+enum StreamError {
+	STREAM_NO_ERROR,
+	STREAM_EOF,
+};
+
+#define ERROR(t,c) (MessageError){(t),(c)}
+
+#define NO_ERROR ERROR(MESSAGE_ERROR_NONE_T, c)
+
+#define STREAM_ERROR(sp)  ERROR(MESSAGE_ERROR_STREAM_T, stream_error(sp))
+
+#define PARSER_ERROR(c)   ERROR(MESSAGE_ERROR_PARSER_T, c)
+
+#define BUFFER_ERROR(c)   ERROR(MESSAGE_ERROR_BUFFER_T, c)
+
+/*-\-\-----------------------------------------------------------------/-/-*/
+/*-/-/-----------------------------------------------------------------\-\-*/
+
+typedef struct message Message;
+
+#define T_MAX 32
+
+struct message {
+	Buffer *b;
+	size_t n;
+	char *t[T_MAX];
+};
 
 #define NEWLINE     '\n'
 #define RETURN_FEED '\r'
@@ -114,28 +137,10 @@ struct message_error {
 
 MessageError get_message (Stream *sp, Message *mp) {
 
-#define PARSER_ERROR(e) \
-	(MessageError) {\
-		(e), \
-		MESSAGE_ERROR_PARSER_T \
-	}
-
-#define BUFFER_ERROR(e) \
-	(MessageError) {\
-		(e), \
-		MESSAGE_ERROR_BUFFER_T \
-	}
-
 # define PUSHC(b,c) do {\
 	if (buffer_push((b), (c)) == EOF) \
 		return BUFFER_ERROR(BUFFER_EOF); \
 } while (0)
-
-# define STREAM_ERROR(s) \
-	(MessageError) { \
-		stream_error((s)),\
-		MESSAGE_ERROR_STREAM_T \
-	}
 
 # define GETC(c,s) do { \
 	if ((c = stream_get(s)) == EOF) { \
@@ -158,7 +163,7 @@ MessageError get_message (Stream *sp, Message *mp) {
 		} else if (c == SPACE) {
 			PUSHC(mp->b, '\0');
 			if (mp->n >= T_MAX) {
-				return PARSER_ERROR(PARSER_MAX_T);
+				return PARSER_ERROR(PARSER_T_MAX);
 			}
 			mp->n++;
 			mp->t[mp->n] = buffer_head(mp->b) + 1;
@@ -186,10 +191,7 @@ RETURN:
 	mp->n++;
 	return NO_ERROR;
 
-#undef BUFFER_ERROR
 #undef PUSHC
-
-#undef STREAM_ERROR
 #undef GETC
 }
 
