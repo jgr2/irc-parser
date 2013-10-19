@@ -24,26 +24,30 @@ struct buffer {
 	char *base;
 };
 
+#define BUFFER_FULL(bp)  ((bp)->len >= (bp)->cap)
+
+#define BUFFER_EMPTY(bp) ((bp)->len <= 0)
+
+#define BUFFER_PUSH(bp) ((unsigned char)((bp)->base[(bp)->len++] = c))
+
+#define BUFFER_HEAD(bp) ((bp)->base + ((bp)->len - 1))
+
 int buffer_push (Buffer *bp, int c) {
-	return (bp->len < bp->cap) ? 
-		(unsigned char)(bp->base[bp->len++] = c)
-		:EOF;
+	return BUFFER_FULL(bp) ? EOF: BUFFER_PUSH(bp);
 }
 
-char *buffer_head (Buffer *b) {
-	return (b->len) ? 
-		b->base + (b->len - 1)
-		:NULL;
+char *buffer_head (Buffer *bp) {
+	return BUFFER_EMPTY(bp) ? NULL: BUFFER_HEAD(bp);
 }
 
-void buffer_set_head (Buffer *b, int c) {
+void buffer_set_head (Buffer *bp, int c) {
 	char *p;
-	if ((p = buffer_head(b))) {
+	if ((p = buffer_head(bp))) {
 		*p = c;
 	}
 }
 
-void buffer_reset (Buffer *b) {
+void buffer_reset (Buffer *bp) {
 	b->len = 0;
 }
 
