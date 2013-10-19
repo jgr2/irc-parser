@@ -13,6 +13,8 @@
 #include <string.h>
 #include <errno.h>
 
+#define NELEMS(t) (sizeof t / sizeof *t)
+
 /*-/-/-----------------------------------------------------------------\-\-*/
 
 typedef struct buffer Buffer;
@@ -197,32 +199,6 @@ RETURN:
 
 /*-\-\-----------------------------------------------------------------/-/-*/
 
-#define NELEMS(t) (sizeof t / sizeof *t)
-
-struct mtest {
-	char *input;
-	Message output;
-};
-
-struct mtest tests[] = { 
-	{ 
-		":nick!user@irc.net COMMAND foo:bar :foo bar foo bar\r\n", 
-		(Message){ NULL, 4, {
-				":nick!user@irc.net", 
-				"COMMAND",
-				"foo:bar", 
-				":foo bar foo bar"
-			}
-		}
-	},
-	{ 
-		"\r\n", 
-		(Message){ NULL, 1, {""}}
-	}
-};
-
-size_t ntests = NELEMS(tests);
-
 int byte_stream_get (void *_p) {
 	char **p = _p;
 	char *s = *p;
@@ -244,9 +220,33 @@ int byte_stream_error (void *_p) {
 	return byte_stream_eof(_p);
 }
 
+struct mtest {
+	char *input;
+	Message output;
+};
+
 char buffer[BUFSIZ];
 
 int main () {
+
+	struct mtest tests[] = { 
+		{
+			":nick!user@irc.net COMMAND foo:bar :foo bar foo bar\r\n", 
+			(Message){ NULL, 4, {
+					":nick!user@irc.net", 
+					"COMMAND",
+					"foo:bar", 
+					":foo bar foo bar"
+				}
+			}
+		},
+		{
+			"\r\n",
+			(Message){ NULL, 1, {""}}
+		}
+	};
+
+	size_t ntests = NELEMS(tests);
 
 	long unsigned nerrors;
 	long unsigned i, j;
@@ -268,7 +268,7 @@ int main () {
 
 	for (i = 0; i < ntests; i++) {
 		s.handle = &tests[i].input;
-		b.len = 0;
+		b.len = 0; // buffer_reset
 		memset(m.t, '\0', sizeof m.t);
 
 		get_message(&s, &m);
