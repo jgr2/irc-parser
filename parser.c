@@ -4,6 +4,7 @@
 	* better detection of blank lines, see test 2
 	* organisation of token array to struct layout for associative win
 	* make inline message struct comparison
+	* add more message tests
  */
 
 #include <stdlib.h>
