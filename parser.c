@@ -242,26 +242,26 @@ struct mtest {
 	Message output;
 };
 
+struct mtest tests[] = { 
+	{
+		":nick!user@irc.net COMMAND foo:bar :foo bar foo bar\r\n", 
+		{ NULL, 4, {
+				":nick!user@irc.net", 
+				"COMMAND",
+				"foo:bar", 
+				":foo bar foo bar"
+			}
+		}
+	},
+	{
+		"\r\n",
+		{ NULL, 1, {""}}
+	}
+};
+
 char buffer[BUFSIZ];
 
 int main () {
-
-	struct mtest tests[] = { 
-		{
-			":nick!user@irc.net COMMAND foo:bar :foo bar foo bar\r\n", 
-			{ NULL, 4, {
-					":nick!user@irc.net", 
-					"COMMAND",
-					"foo:bar", 
-					":foo bar foo bar"
-				}
-			}
-		},
-		{
-			"\r\n",
-			{ NULL, 1, {""}}
-		}
-	};
 
 	size_t ntests = NELEMS(tests);
 
