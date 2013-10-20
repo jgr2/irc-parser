@@ -83,10 +83,12 @@ int stream_eof (Stream *sp) {
 /*-\-\-----------------------------------------------------------------/-/-*/
 /*-/-/-----------------------------------------------------------------\-\-*/
 
+#define NO_ERROR 0
+
 typedef struct message_error MessageError;
 
 enum MessageErrorType {
-	MESSAGE_ERROR_NONE_T,
+	MESSAGE_ERROR_NONE_T = NO_ERROR,
 	MESSAGE_ERROR_BUFFER_T,
 	MESSAGE_ERROR_STREAM_T,
 	MESSAGE_ERROR_PARSE_T
@@ -98,21 +100,19 @@ struct message_error {
 };
 
 enum ParseError {
-	PARSE_NO_ERROR,
+	PARSE_NO_ERROR = NO_ERROR,
 	PARSE_T_MAX
 };
 
 enum BufferError {
-	BUFFER_NO_ERROR,
-	
-	BUFFER_EMPTY = EOF,
-	BUFFER_EOF = EOF
+	BUFFER_NO_ERROR = NO_ERROR,
+	BUFFER_EMPTY,
+	BUFFER_FULL
 };
 
 enum StreamError {
-	STREAM_NO_ERROR,
-
-	STREAM_EOF = EOF
+	STREAM_NO_ERROR = NO_ERROR,
+	STREAM_END
 };
 
 MessageError error_none = {MESSAGE_ERROR_NONE_T, 0};
@@ -146,7 +146,7 @@ MessageError get_message (Stream *sp, Message *mp) {
 # define PUSHC(b,c) do {\
 	if (buffer_push((b), (c)) == EOF) { \
 		error = error_buffer; \
-		error.code = BUFFER_EOF; \
+		error.code = BUFFER_FULL; \
 		goto RETURN; \
 	} \
 } while (0)
@@ -248,13 +248,9 @@ struct mtest tests[] = {
 			}
 		}
 	},
-	{
-		"\r\n",
-		{ NULL, 1, {""}}
-	},
-	{
-		"COMMAND\r\n", {NULL, 1, {"COMMAND"}}
-	}
+	{"\r\n", {NULL, 1, {""}}},
+	{":\r\n", {NULL, 1, {":"}}},
+	{"COMMAND\r\n", {NULL, 1, {"COMMAND"}}}
 };
 
 size_t ntests = NELEMS(tests);
