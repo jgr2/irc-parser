@@ -136,10 +136,10 @@ struct message {
 	char *t[T_MAX];
 };
 
-#define NEWLINE     '\n'
-#define RETURN_FEED '\r'
-#define SPACE       ' '
-#define COLON       ':'
+#define NL    '\n'
+#define CR    '\r'
+#define SPACE  ' '
+#define COLON  ':'
 
 MessageError get_message (Stream *sp, Message *mp) {
 
@@ -170,7 +170,7 @@ MessageError get_message (Stream *sp, Message *mp) {
 	for (;; l = c) {
 		GETC(c,sp);
 
-		if (c == NEWLINE && l == RETURN_FEED) {
+		if (c == NL && l == CR) {
 			buffer_set_head(mp->b, '\0');
 			goto RETURN;
 		} else if (c == SPACE) {
@@ -195,7 +195,7 @@ MessageError get_message (Stream *sp, Message *mp) {
 	for (;; l = c) {
 		GETC(c, sp);
 
-		if (c == NEWLINE && l == RETURN_FEED) {
+		if (c == NL && l == CR) {
 			buffer_set_head(mp->b, '\0');
 			break;
 		}
