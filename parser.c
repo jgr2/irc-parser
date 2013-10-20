@@ -259,20 +259,19 @@ struct mtest tests[] = {
 	}
 };
 
+size_t ntests = NELEMS(tests);
+
 char buffer[BUFSIZ];
+
+#include <assert.h>
 
 int main () {
 
-	size_t ntests = NELEMS(tests);
-
-	long unsigned nerrors;
 	long unsigned i, j;
 	
 	Message m;
 	Stream s;
 	Buffer b;
-
-	nerrors = 0;
 
 	m.b = &b;
 
@@ -290,28 +289,12 @@ int main () {
 
 		get_message(&s, &m);
 
-		if (m.n != tests[i].output.n) {
-			fprintf(stderr, "[%.2lu]: token count mismatch: got: %lu expected: %lu\n", 
-				i, m.n, tests[i].output.n);
-			nerrors++;
-		} else {
-			for (j = 0; j < m.n; j++) {
-				if (strlen(tests[i].output.t[j]) != strlen(m.t[j])) {			
-					fprintf(stderr, "[%.2lu]: token length mismatch: got: %s expected: %s\n",
-						j, m.t[j], tests[i].output.t[j]);
-					nerrors++;
-				} else if ( strcmp(tests[i].output.t[j], m.t[j]) != 0) {
-					fprintf(stderr, "[%.2lu]: token mismatch: got: %s expected: %s\n",
-						j, m.t[j], tests[i].output.t[j]);
-					nerrors++;
-				}
-			}
+		assert(m.n == tests[i].output.n);
+	
+		for (j = 0; j < m.n; j++) {
+			assert(strlen(tests[i].output.t[j]) == strlen(m.t[j]));
+			assert(strcmp(tests[i].output.t[j], m.t[j]) == 0);
 		}
-	}
-
-	if (nerrors > 0) {
-		fprintf(stderr, "%lu errors total\n");
-		exit(EXIT_FAILURE);
 	}
 
 	exit(EXIT_SUCCESS);
