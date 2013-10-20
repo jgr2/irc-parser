@@ -48,7 +48,7 @@ void buffer_set_head (Buffer *bp, int c) {
 }
 
 void buffer_reset (Buffer *bp) {
-	b->len = 0;
+	bp->len = 0;
 }
 
 /*-\-\-----------------------------------------------------------------/-/-*/
@@ -89,7 +89,7 @@ enum MessageErrorType {
 	MESSAGE_ERROR_NONE_T,
 	MESSAGE_ERROR_BUFFER_T,
 	MESSAGE_ERROR_STREAM_T,
-	MESSAGE_ERROR_PARSER_T
+	MESSAGE_ERROR_PARSE_T
 };
 
 struct message_error {
@@ -97,9 +97,9 @@ struct message_error {
 	int code;
 };
 
-enum ParserError {
-	PARSER_NO_ERROR,
-	PARSER_T_MAX
+enum ParseError {
+	PARSE_NO_ERROR,
+	PARSE_T_MAX
 };
 
 enum BufferError {
@@ -110,18 +110,22 @@ enum BufferError {
 
 enum StreamError {
 	STREAM_NO_ERROR,
-	STREAM_EOF,
+	STREAM_EOF
 };
 
-#define ERROR(t,c) (MessageError){(t),(c)}
+/*#define ERROR(t,c) {(t),(c)}*/
 
-#define NO_ERROR ERROR(MESSAGE_ERROR_NONE_T, c)
+MessageError error_none = {MESSAGE_ERROR_NONE_T, 0};
+/* #define NO_ERROR ERROR(MESSAGE_ERROR_NONE_T, 0)
 
-#define STREAM_ERROR(sp)  ERROR(MESSAGE_ERROR_STREAM_T, stream_error(sp))
+#define STREAM_ERROR(sp)  ERROR(MESSAGE_ERROR_STREAM_T, stream_error(sp)) */
+MessageError error_stream = {MESSAGE_ERROR_STREAM_T, STREAM_NO_ERROR};
 
-#define PARSER_ERROR(c)   ERROR(MESSAGE_ERROR_PARSER_T, c)
+/*#define PARSER_ERROR(c)   ERROR(MESSAGE_ERROR_PARSER_T, c)*/
+MessageError error_parse = {MESSAGE_ERROR_PARSE_T, PARSE_NO_ERROR};
 
-#define BUFFER_ERROR(c)   ERROR(MESSAGE_ERROR_BUFFER_T, c)
+/* #define BUFFER_ERROR(c)   ERROR(MESSAGE_ERROR_BUFFER_T, c) */
+MessageError error_buffer = {MESSAGE_ERROR_BUFFER_T, BUFFER_NO_ERROR};
 
 /*-\-\-----------------------------------------------------------------/-/-*/
 /*-/-/-----------------------------------------------------------------\-\-*/
@@ -144,15 +148,22 @@ struct message {
 MessageError get_message (Stream *sp, Message *mp) {
 
 # define PUSHC(b,c) do {\
-	if (buffer_push((b), (c)) == EOF) \
-		return BUFFER_ERROR(BUFFER_EOF); \
+	if (buffer_push((b), (c)) == EOF) { \
+		error = error_buffer; \
+		error.code = BUFFER_EOF; \
+		goto RETURN; \
+	} \
 } while (0)
 
 # define GETC(c,s) do { \
 	if ((c = stream_get(s)) == EOF) { \
-		return STREAM_ERROR(s); \
+		error = error_stream; \
+		error.code = stream_error(s); \
+		goto RETURN; \
 	} \
 } while (0)
+
+	MessageError error = error_none;
 
 	int c, l;
 
@@ -169,7 +180,9 @@ MessageError get_message (Stream *sp, Message *mp) {
 		} else if (c == SPACE) {
 			PUSHC(mp->b, '\0');
 			if (mp->n >= T_MAX) {
-				return PARSER_ERROR(PARSER_T_MAX);
+				error = error_parse;
+				error.code = PARSE_T_MAX;
+				goto RETURN;
 			}
 			mp->n++;
 			mp->t[mp->n] = buffer_head(mp->b) + 1;
@@ -195,7 +208,7 @@ MessageError get_message (Stream *sp, Message *mp) {
 
 RETURN:
 	mp->n++;
-	return NO_ERROR;
+	return error;
 
 #undef PUSHC
 #undef GETC
@@ -236,7 +249,7 @@ int main () {
 	struct mtest tests[] = { 
 		{
 			":nick!user@irc.net COMMAND foo:bar :foo bar foo bar\r\n", 
-			(Message){ NULL, 4, {
+			{ NULL, 4, {
 					":nick!user@irc.net", 
 					"COMMAND",
 					"foo:bar", 
@@ -246,7 +259,7 @@ int main () {
 		},
 		{
 			"\r\n",
-			(Message){ NULL, 1, {""}}
+			{ NULL, 1, {""}}
 		}
 	};
 
@@ -272,7 +285,7 @@ int main () {
 
 	for (i = 0; i < ntests; i++) {
 		s.handle = &tests[i].input;
-		b.len = 0; // buffer_reset
+		buffer_reset(m.b);
 		memset(m.t, '\0', sizeof m.t);
 
 		get_message(&s, &m);
