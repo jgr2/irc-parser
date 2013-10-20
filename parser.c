@@ -13,7 +13,7 @@
 #include <string.h>
 #include <errno.h>
 
-#define NELEMS(t) (sizeof t / sizeof *t)
+#define NELEMS(t) (sizeof t / sizeof t[0])
 
 /*-/-/-----------------------------------------------------------------\-\-*/
 
@@ -104,27 +104,23 @@ enum ParseError {
 
 enum BufferError {
 	BUFFER_NO_ERROR,
-	BUFFER_EOF,
-	BUFFER_EMPTY
+	
+	BUFFER_EMPTY = EOF,
+	BUFFER_EOF = EOF
 };
 
 enum StreamError {
 	STREAM_NO_ERROR,
-	STREAM_EOF
+
+	STREAM_EOF = EOF
 };
 
-/*#define ERROR(t,c) {(t),(c)}*/
-
 MessageError error_none = {MESSAGE_ERROR_NONE_T, 0};
-/* #define NO_ERROR ERROR(MESSAGE_ERROR_NONE_T, 0)
 
-#define STREAM_ERROR(sp)  ERROR(MESSAGE_ERROR_STREAM_T, stream_error(sp)) */
 MessageError error_stream = {MESSAGE_ERROR_STREAM_T, STREAM_NO_ERROR};
 
-/*#define PARSER_ERROR(c)   ERROR(MESSAGE_ERROR_PARSER_T, c)*/
 MessageError error_parse = {MESSAGE_ERROR_PARSE_T, PARSE_NO_ERROR};
 
-/* #define BUFFER_ERROR(c)   ERROR(MESSAGE_ERROR_BUFFER_T, c) */
 MessageError error_buffer = {MESSAGE_ERROR_BUFFER_T, BUFFER_NO_ERROR};
 
 /*-\-\-----------------------------------------------------------------/-/-*/
@@ -233,7 +229,6 @@ int byte_stream_eof (void *_p) {
 }
 
 int byte_stream_error (void *_p) {
-	
 	return byte_stream_eof(_p);
 }
 
@@ -256,6 +251,9 @@ struct mtest tests[] = {
 	{
 		"\r\n",
 		{ NULL, 1, {""}}
+	},
+	{
+		"COMMAND\r\n", {NULL, 1, {"COMMAND"}}
 	}
 };
 
