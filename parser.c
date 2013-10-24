@@ -1,6 +1,6 @@
 /* TODO:
 	* error reporting and code to string conversion - half done: code-pair emission,
-		see struct message_error
+		see struct ERROR
 	* better detection of blank lines, see test 2
 	* organisation of token array to struct layout for associative win
 	* make inline message struct comparison
@@ -24,20 +24,20 @@ struct buffer {
 	char *base;
 };
 
-#define BUFFER_FULL(bp)  ((bp)->len >= (bp)->cap)
+#define BUFFER_OVERFLOW(bp)  ((bp)->len >= (bp)->cap)
 
-#define BUFFER_EMPTY(bp) ((bp)->len <= 0)
+#define BUFFER_UNDERFLOW(bp) ((bp)->len <= 0)
 
 #define BUFFER_PUSH(bp) ((unsigned char)((bp)->base[(bp)->len++] = c))
 
 #define BUFFER_HEAD(bp) ((bp)->base + ((bp)->len - 1))
 
 int buffer_push (Buffer *bp, int c) {
-	return BUFFER_FULL(bp) ? EOF: BUFFER_PUSH(bp);
+	return BUFFER_OVERFLOW(bp) ? EOF: BUFFER_PUSH(bp);
 }
 
 char *buffer_head (Buffer *bp) {
-	return BUFFER_EMPTY(bp) ? NULL: BUFFER_HEAD(bp);
+	return BUFFER_UNDERFLOW(bp) ? NULL: BUFFER_HEAD(bp);
 }
 
 void buffer_set_head (Buffer *bp, int c) {
@@ -83,45 +83,40 @@ int stream_eof (Stream *sp) {
 /*-\-\-----------------------------------------------------------------/-/-*/
 /*-/-/-----------------------------------------------------------------\-\-*/
 
-#define NO_ERROR 0
+#define SUCCESS 0
+#define NO_ERROR SUCCESS
 
-typedef struct message_error MessageError;
+typedef struct error Error;
 
-enum MessageErrorType {
-	MESSAGE_ERROR_NONE_T = NO_ERROR,
-	MESSAGE_ERROR_BUFFER_T,
-	MESSAGE_ERROR_STREAM_T,
-	MESSAGE_ERROR_PARSE_T
+enum ErrorType {
+	ERROR_TYPE_NONE = NO_ERROR,
+	ERROR_TYPE_BUFFER,
+	ERROR_TYPE_STREAM,
+	ERROR_TYPE_PARSE
 };
 
-struct message_error {
-	enum MessageErrorType type;
+struct error {
+	enum ErrorType type;
 	int code;
 };
 
 enum ParseError {
-	PARSE_NO_ERROR = NO_ERROR,
-	PARSE_T_MAX
+	PARSE_E_SUCCESS = SUCCESS,
+	PARSE_E_T_MAX
 };
 
 enum BufferError {
-	BUFFER_NO_ERROR = NO_ERROR,
-	BUFFER_EMPTY,
-	BUFFER_FULL
+	BUFFER_E_SUCCESS = SUCCESS,
+	BUFFER_E_OVERFLOW,
+	BUFFER_E_UNDERFLOW
 };
 
 enum StreamError {
-	STREAM_NO_ERROR = NO_ERROR,
-	STREAM_END
+	STREAM_E_SUCCESS = SUCCESS,
+	STREAM_E_EOF
 };
 
-MessageError error_none = {MESSAGE_ERROR_NONE_T, 0};
-
-MessageError error_stream = {MESSAGE_ERROR_STREAM_T, STREAM_NO_ERROR};
-
-MessageError error_parse = {MESSAGE_ERROR_PARSE_T, PARSE_NO_ERROR};
-
-MessageError error_buffer = {MESSAGE_ERROR_BUFFER_T, BUFFER_NO_ERROR};
+Error no_error = {ERROR_TYPE_NONE, SUCCESS};
 
 /*-\-\-----------------------------------------------------------------/-/-*/
 /*-/-/-----------------------------------------------------------------\-\-*/
@@ -141,25 +136,25 @@ struct message {
 #define SPACE  ' '
 #define COLON  ':'
 
-MessageError get_message (Stream *sp, Message *mp) {
+Error get_message (Stream *sp, Message *mp) {
 
 # define PUSHC(b,c) do {\
 	if (buffer_push((b), (c)) == EOF) { \
-		error = error_buffer; \
-		error.code = BUFFER_FULL; \
+		error.type = ERROR_TYPE_BUFFER; \
+		error.code = BUFFER_E_OVERFLOW; \
 		goto RETURN; \
 	} \
 } while (0)
 
 # define GETC(c,s) do { \
 	if ((c = stream_get(s)) == EOF) { \
-		error = error_stream; \
+		error.type = ERROR_TYPE_STREAM; \
 		error.code = stream_error(s); \
 		goto RETURN; \
 	} \
 } while (0)
 
-	MessageError error = error_none;
+	Error error = no_error;
 
 	int c, l;
 
@@ -176,8 +171,8 @@ MessageError get_message (Stream *sp, Message *mp) {
 		} else if (c == SPACE) {
 			PUSHC(mp->b, '\0');
 			if (mp->n >= T_MAX) {
-				error = error_parse;
-				error.code = PARSE_T_MAX;
+				error.type = ERROR_TYPE_PARSE;
+				error.code = PARSE_E_T_MAX;
 				goto RETURN;
 			}
 			mp->n++;
