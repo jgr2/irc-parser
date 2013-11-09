@@ -94,6 +94,8 @@ struct message {
 
 int get_message(Stream *sp, Message *mp) {
 
+	int r = 0;
+
 # define PUSHC(b,c) do {\
 	if (buffer_push((b), (c)) == EOF) { \
 		r = -1; \
@@ -149,7 +151,7 @@ int get_message(Stream *sp, Message *mp) {
 	}
 RETURN:
 	mp->n++;
-	return 0;
+	return r;
 
 #undef PUSHC
 #undef GETC
