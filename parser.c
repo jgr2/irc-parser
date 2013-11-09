@@ -1,6 +1,4 @@
 /* TODO:
-	* error reporting and code to string conversion - half done: code-pair emission,
-		see struct ERROR
 	* better detection of blank lines, see test 2
 	* organisation of token array to struct layout for associative win
 	* make inline message struct comparison
@@ -56,16 +54,12 @@ void buffer_reset (Buffer *bp) {
 
 typedef struct stream Stream;
 
-typedef int (*stream_get_fn)(void *);
-typedef int (*stream_eof_fn)(void *);
-typedef int (*stream_error_fn)(void *);
-
 struct stream {
 	void *handle;
-	stream_get_fn get;
 
-	stream_eof_fn eof;
-	stream_error_fn error;
+	int (*get)(void *);
+	int (*eof)(void *);
+	int (*error)(void *);
 };
 
 int stream_get (Stream *sp) {
