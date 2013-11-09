@@ -83,44 +83,6 @@ int stream_eof (Stream *sp) {
 /*-\-\-----------------------------------------------------------------/-/-*/
 /*-/-/-----------------------------------------------------------------\-\-*/
 
-#define SUCCESS 0
-#define NO_ERROR SUCCESS
-
-typedef struct error Error;
-
-enum ErrorType {
-	ERROR_TYPE_NONE = NO_ERROR,
-	ERROR_TYPE_BUFFER,
-	ERROR_TYPE_STREAM,
-	ERROR_TYPE_PARSE
-};
-
-struct error {
-	enum ErrorType type;
-	int code;
-};
-
-enum ParseError {
-	PARSE_E_SUCCESS = SUCCESS,
-	PARSE_E_T_MAX
-};
-
-enum BufferError {
-	BUFFER_E_SUCCESS = SUCCESS,
-	BUFFER_E_OVERFLOW,
-	BUFFER_E_UNDERFLOW
-};
-
-enum StreamError {
-	STREAM_E_SUCCESS = SUCCESS,
-	STREAM_E_EOF
-};
-
-Error no_error = {ERROR_TYPE_NONE, SUCCESS};
-
-/*-\-\-----------------------------------------------------------------/-/-*/
-/*-/-/-----------------------------------------------------------------\-\-*/
-
 typedef struct message Message;
 
 #define T_MAX 32
@@ -136,25 +98,21 @@ struct message {
 #define SPACE  ' '
 #define COLON  ':'
 
-Error get_message (Stream *sp, Message *mp) {
+int get_message(Stream *sp, Message *mp) {
 
 # define PUSHC(b,c) do {\
 	if (buffer_push((b), (c)) == EOF) { \
-		error.type = ERROR_TYPE_BUFFER; \
-		error.code = BUFFER_E_OVERFLOW; \
+		r = -1; \
 		goto RETURN; \
 	} \
 } while (0)
 
 # define GETC(c,s) do { \
 	if ((c = stream_get(s)) == EOF) { \
-		error.type = ERROR_TYPE_STREAM; \
-		error.code = stream_error(s); \
+		r = -1; \
 		goto RETURN; \
 	} \
 } while (0)
-
-	Error error = no_error;
 
 	int c, l;
 
@@ -171,8 +129,7 @@ Error get_message (Stream *sp, Message *mp) {
 		} else if (c == SPACE) {
 			PUSHC(mp->b, '\0');
 			if (mp->n >= T_MAX) {
-				error.type = ERROR_TYPE_PARSE;
-				error.code = PARSE_E_T_MAX;
+				r = -1;
 				goto RETURN;
 			}
 			mp->n++;
@@ -196,10 +153,9 @@ Error get_message (Stream *sp, Message *mp) {
 		}
 		PUSHC(mp->b, c);
 	}
-
 RETURN:
 	mp->n++;
-	return error;
+	return 0;
 
 #undef PUSHC
 #undef GETC
@@ -276,7 +232,7 @@ int main () {
 		buffer_reset(m.b);
 		memset(m.t, '\0', sizeof m.t);
 
-		get_message(&s, &m);
+		assert(get_message(&s, &m) == 0);
 
 		assert(m.n == tests[i].output.n);
 	
